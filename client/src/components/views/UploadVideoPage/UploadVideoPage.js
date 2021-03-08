@@ -1,0 +1,194 @@
+import React, { useState } from 'react'
+import { Typography, Button, Form, message, Input } from 'antd';
+import Dropzone from 'react-dropzone';
+import Icon from '@ant-design/icons';
+import Axios from 'axios';
+import { useSelector } from 'react-redux';
+
+const { Title } = Typography;
+const { TextArea } = Input;
+
+const Private = [
+    { value: 1, label:'Public'},
+    { value: 0, label:'Private'}
+]
+
+const Catogory = [
+    { value: 0, label: "Music" },
+    { value: 0, label: "Sports" },
+    { value: 0, label: "Pets & Animals" },
+    { value: 0, label: "Autos & Vehicles" },
+    { value: 0, label: "Film & Animation" },
+]
+
+function UploadVideoPage(props) {
+
+    const user = useSelector(state => state.user)
+
+    const [title, setTitle] = useState("");
+    const [privacy, setPrivacy] = useState(0)
+    const [FilePath, setFilePath] = useState("")
+    const [Duration, setDuration] = useState("")
+    const [Thumbnail, setThumbnail] = useState("")
+    const [Categories, setCategories] = useState("Film & Animation")
+    const [Description, setDescription] = useState("");
+
+
+    const handleChangeTitle = ( event ) => {
+        setTitle(event.currentTarget.value)
+    }
+
+    const handleChangeDecsription = (event) => {
+        setDescription(event.currentTarget.value)
+    }
+
+    const handleChangeOne = (event) => {
+        setPrivacy(event.currentTarget.value)
+    }
+
+    const handleChangeTwo = (event) => {
+        setCategories(event.currentTarget.value)
+    }
+
+    const onSubmit = (event) => {
+        event.preventDefault()
+
+        if( user.userData && !user.userData.isAuth) {
+            return alert("Please Log In First")
+        }
+
+        if(title === "" || Description === "" ||
+        FilePath === "" || Categories === "" ||
+        Duration === "" || Thumbnail === "") {
+            return alert("Please first fill all the fields")
+        }
+
+        const varibles = {
+            writer: user.userData._id,
+            title: title,
+            description: Description,
+            privacy: privacy,
+            filePath: FilePath,
+            category: Categories,
+            duration: Duration,
+            thumbnail: Thumbnail
+        }
+
+        Axios.post('/api/video/uploadVideo', varibles)
+        .then(response => {
+            if(response.data.success) {
+              alert('Video Uploaded Successfully')
+              props.history.push('/')
+            }
+            else {
+                alert("Failed to upload video")
+            }
+
+        }
+        )
+    }
+
+    const onDrop = (files) => {
+          let formData = new FormData()
+          const config = {
+              header: { 'content-type': 'multipart/form-data'}
+          }   
+          console.log(files);
+          formData.append("file", files[0])
+
+          Axios.post("/api/video/uploadfiles", formData, config)
+          .then(response => {
+              console.log(response);
+              if(response.data.success){
+                 let varible = {
+                     filePath: response.data.filePath,
+                     fileName: response.data.fileName
+                 }
+                 setFilePath(response.data.filePath)
+
+                 //Generating thumbnail with is filepath;
+
+                 Axios.post("/api/video/thumbnail", varible)
+                 .then(response => {
+                     if (response.data.success) {
+                         setDuration(response.data.fileDuration)
+                         setThumbnail(response.data.thumbsFilePath)
+                     } else {
+                         alert("Failed to fetch thumbnails from the video")
+                     }
+                 })
+              }
+              else {
+                  alert("Falied to save video to the server")
+              }
+          })
+    }
+
+    return (
+        <div style={{ maxWidth: '700px', margin: '2rem auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <Title level={2} > Upload Video</Title>
+        </div>
+
+        <Form onSubmit={onSubmit}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Dropzone 
+                    onDrop={onDrop}
+                    multiple={false}
+                    maxSize={800000000}>
+                    {({ getRootProps, getInputProps }) => (
+                        <div style={{ width: '300px', height: '240px', border: '1px solid lightgray', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            {...getRootProps()}
+                        >
+                            <input {...getInputProps()} />
+                            <Icon type="plus" style={{ fontSize: '3rem' }} />
+
+                        </div>
+                    )}
+                </Dropzone>
+
+                { Thumbnail !== "" &&
+                    <div>
+                        <img src={`http://localhost:5000/${Thumbnail}`} alt="haha" />
+                    </div>
+                }
+            </div>
+
+            <br /><br />
+            <label>Title</label>
+            <Input
+                 onChange={handleChangeTitle}
+                 value={title}
+            />
+            <br /><br />
+            <label>Description</label>
+            <TextArea
+                 onChange={handleChangeDecsription}
+                 value={Description}
+            />
+            <br /><br />
+
+            <select onChange={handleChangeOne}>
+                {Private.map((item, index) => (
+                    <option key={index} value={item.value}>{item.label}</option>
+                ))}
+            </select>
+            <br /><br />
+
+            <select onChange={handleChangeTwo}>
+                {Catogory.map((item, index) => (
+                    <option key={index} value={item.label}>{item.label}</option>
+                ))}
+            </select>
+            <br /><br />
+
+            <Button type="primary" size="large" onClick={onSubmit}>
+                Submit
+            </Button>
+
+        </Form>
+    </div>
+    )
+}
+
+export default UploadVideoPage
