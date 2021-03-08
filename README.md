@@ -8,7 +8,7 @@ To use this application,
 5. Finally, type ---> " npm run dev " on root directory to run the program.
 
 
-If you have problem, feel free to open issues.
+If you have problem, feel free to open issues or contact me.
 
 
 
